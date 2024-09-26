@@ -12,6 +12,10 @@ cfg_if! {
         pub type dev_t = ::c_short;
         pub type ino_t = ::c_ushort;
         pub type off_t = ::c_int;
+    } else if #[cfg(any(target_os = "kallistios"))] {
+        pub type dev_t = ::c_short;
+        pub type ino_t = ::c_ulong;
+        pub type off_t = ::c_long;
     } else {
         pub type dev_t = u32;
         pub type ino_t = u32;
@@ -23,13 +27,13 @@ pub type fsblkcnt_t = u64;
 pub type fsfilcnt_t = u32;
 pub type id_t = u32;
 pub type key_t = ::c_int;
-pub type loff_t = ::c_longlong;
+pub type loff_t = ::c_longlong; // NOTE: Not in KOS
 pub type mode_t = ::c_uint;
 pub type nfds_t = u32;
 pub type nlink_t = ::c_ushort;
 pub type pthread_t = ::c_ulong;
 pub type pthread_key_t = ::c_uint;
-pub type rlim_t = u32;
+pub type rlim_t = u32; // NOTE: Not in KOS
 
 cfg_if! {
     if #[cfg(target_os = "horizon")] {
@@ -40,13 +44,13 @@ cfg_if! {
 }
 
 pub type socklen_t = u32;
-pub type speed_t = u32;
+pub type speed_t = u32; // NOTE: Not in KOS
 pub type suseconds_t = i32;
-pub type tcflag_t = ::c_uint;
+pub type tcflag_t = ::c_uint; // NOTE: Not in KOS
 pub type useconds_t = u32;
 
 cfg_if! {
-    if #[cfg(any(target_os = "horizon", all(target_os = "espidf", espidf_time64)))] {
+    if #[cfg(any(target_os = "horizon", target_os = "kallistios", all(target_os = "espidf", espidf_time64)))] {
         pub type time_t = ::c_longlong;
     } else {
         pub type time_t = i32;
@@ -54,7 +58,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(not(target_os = "horizon"))] {
+    if #[cfg(not(any(target_os = "horizon", target_os = "kallistios")))] {
         s!{
             pub struct hostent {
                 pub h_name: *mut ::c_char,
@@ -78,24 +82,26 @@ s! {
         pub ai_protocol: ::c_int,
         pub ai_addrlen: socklen_t,
 
-        #[cfg(target_os = "espidf")]
+        #[cfg(any(target_os = "espidf", target_os = "kallistios"))]
         pub ai_addr: *mut sockaddr,
 
         pub ai_canonname: *mut ::c_char,
 
         #[cfg(not(any(
-            target_os = "espidf",
+            target_os = "espidf", target_os = "kallistios",
             all(libc_cfg_target_vendor, target_arch = "powerpc", target_vendor = "nintendo"))))]
         pub ai_addr: *mut sockaddr,
 
         pub ai_next: *mut addrinfo,
     }
 
+    // NOTE: Not in KOS
     pub struct ip_mreq {
         pub imr_multiaddr: in_addr,
         pub imr_interface: in_addr,
     }
 
+    // NOTE: Not in KOS
     pub struct linger {
         pub l_onoff: ::c_int,
         pub l_linger: ::c_int,
@@ -103,12 +109,6 @@ s! {
 
     pub struct in_addr {
         pub s_addr: ::in_addr_t,
-    }
-
-    pub struct pollfd {
-        pub fd: ::c_int,
-        pub events: ::c_int,
-        pub revents: ::c_int,
     }
 
     pub struct lconv {
@@ -150,6 +150,7 @@ s! {
         pub tm_isdst: ::c_int,
     }
 
+    // NOTE: Not in KOS
     pub struct statvfs {
         pub f_bsize: ::c_ulong,
         pub f_frsize: ::c_ulong,
@@ -190,6 +191,7 @@ s! {
         pub pw_shell: *mut ::c_char,
     }
 
+    // NOTE: Not in KOS
     pub struct termios { // Unverified
         pub c_iflag: ::tcflag_t,
         pub c_oflag: ::tcflag_t,
@@ -203,6 +205,7 @@ s! {
         __size: [::c_char; 16],
     }
 
+    // NOTE: Not in KOS
     pub struct Dl_info { // Unverified
         pub dli_fname: *const ::c_char,
         pub dli_fbase: *mut ::c_void,
@@ -210,15 +213,7 @@ s! {
         pub dli_saddr: *mut ::c_void,
     }
 
-    pub struct utsname { // Unverified
-        pub sysname: [::c_char; 65],
-        pub nodename: [::c_char; 65],
-        pub release: [::c_char; 65],
-        pub version: [::c_char; 65],
-        pub machine: [::c_char; 65],
-        pub domainname: [::c_char; 65]
-    }
-
+    // NOTE: Not in KOS
     pub struct cpu_set_t { // Unverified
         bits: [u32; 32],
     }
@@ -229,6 +224,44 @@ s! {
 
     pub struct pthread_rwlockattr_t { // Unverified
         __size: [u8; __SIZEOF_PTHREAD_RWLOCKATTR_T]
+    }
+}
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        s!{
+            pub struct pollfd {
+                pub fd: ::c_int,
+                pub events: ::c_short,
+                pub revents: ::c_short,
+            }
+
+            pub struct utsname {
+                pub sysname: [::c_char; 64],
+                pub nodename: [::c_char; 64],
+                pub release: [::c_char; 64],
+                pub version: [::c_char; 64],
+                pub machine: [::c_char; 64],
+                pub domainname: [::c_char; 64]
+            }
+        }
+    } else {
+        s!{
+            pub struct pollfd {
+                pub fd: ::c_int,
+                pub events: ::c_int,
+                pub revents: ::c_int,
+            }
+
+            pub struct utsname { // Unverified
+                pub sysname: [::c_char; 65],
+                pub nodename: [::c_char; 65],
+                pub release: [::c_char; 65],
+                pub version: [::c_char; 65],
+                pub machine: [::c_char; 65],
+                pub domainname: [::c_char; 65]
+            }
+        }
     }
 }
 
@@ -257,6 +290,16 @@ cfg_if! {
         pub const __SIZEOF_PTHREAD_RWLOCK_T: usize = 4;
         pub const __SIZEOF_PTHREAD_RWLOCKATTR_T: usize = 12;
         pub const __SIZEOF_PTHREAD_BARRIER_T: usize = 32;
+    } else if #[cfg(target_os = "kallistios")] {
+        const __PTHREAD_INITIALIZER_BYTE: u8 = 0;
+        pub const __SIZEOF_PTHREAD_ATTR_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_MUTEX_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_MUTEXATTR_T: usize = 8;
+        pub const __SIZEOF_PTHREAD_COND_T: usize = 16;
+        pub const __SIZEOF_PTHREAD_CONDATTR_T: usize = 16;
+        pub const __SIZEOF_PTHREAD_RWLOCK_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_RWLOCKATTR_T: usize = 0;
+        pub const __SIZEOF_PTHREAD_BARRIER_T: usize = 64;
     } else if #[cfg(target_os = "vita")] {
         const __PTHREAD_INITIALIZER_BYTE: u8 = 0xff;
         pub const __SIZEOF_PTHREAD_ATTR_T: usize = 4;
@@ -280,12 +323,23 @@ cfg_if! {
     }
 }
 
-pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 4;
-pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 1;
-pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 1;
-pub const PTHREAD_MUTEX_NORMAL: ::c_int = 0;
-pub const PTHREAD_MUTEX_RECURSIVE: ::c_int = 1;
-pub const PTHREAD_MUTEX_ERRORCHECK: ::c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 0;
+        pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 0;
+        pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 0;
+        pub const PTHREAD_MUTEX_NORMAL: ::c_int = 0;
+        pub const PTHREAD_MUTEX_RECURSIVE: ::c_int = 3;
+        pub const PTHREAD_MUTEX_ERRORCHECK: ::c_int = 2;
+    } else {
+        pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 4;
+        pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 1;
+        pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 1;
+        pub const PTHREAD_MUTEX_NORMAL: ::c_int = 0;
+        pub const PTHREAD_MUTEX_RECURSIVE: ::c_int = 1;
+        pub const PTHREAD_MUTEX_ERRORCHECK: ::c_int = 2;
+    }
+}
 
 cfg_if! {
     if #[cfg(any(target_os = "horizon", target_os = "espidf"))] {
@@ -413,9 +467,15 @@ pub const O_SYNC: ::c_int = 8192;
 pub const O_NONBLOCK: ::c_int = 16384;
 
 pub const O_ACCMODE: ::c_int = 3;
-pub const O_CLOEXEC: ::c_int = 0x80000;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const O_CLOEXEC: ::c_int = 0x40000;
+    } else {
+        pub const O_CLOEXEC: ::c_int = 0x80000;
+    }
+}
 
-pub const RTLD_LAZY: ::c_int = 0x1;
+pub const RTLD_LAZY: ::c_int = 0x1; // NOTE: Not in KOS
 
 pub const STDIN_FILENO: ::c_int = 0;
 pub const STDOUT_FILENO: ::c_int = 1;
@@ -425,8 +485,8 @@ pub const SEEK_SET: ::c_int = 0;
 pub const SEEK_CUR: ::c_int = 1;
 pub const SEEK_END: ::c_int = 2;
 
-pub const FIOCLEX: ::c_ulong = 0x20006601;
-pub const FIONCLEX: ::c_ulong = 0x20006602;
+pub const FIOCLEX: ::c_ulong = 0x20006601; // NOTE: Not in KOS
+pub const FIONCLEX: ::c_ulong = 0x20006602; // NOTE: Not in KOS
 
 pub const S_BLKSIZE: ::mode_t = 1024;
 pub const S_IREAD: ::mode_t = 256;
@@ -451,72 +511,135 @@ pub const S_IROTH: ::mode_t = 4;
 pub const S_IWOTH: ::mode_t = 2;
 pub const S_IXOTH: ::mode_t = 1;
 
-pub const SOL_TCP: ::c_int = 6;
+pub const SOL_TCP: ::c_int = 6; // NOTE: Not in KOS
 
 pub const PF_UNSPEC: ::c_int = 0;
-pub const PF_INET: ::c_int = 2;
-pub const PF_INET6: ::c_int = 23;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const PF_INET: ::c_int = 1;
+        pub const PF_INET6: ::c_int = 2;
+    } else {
+        pub const PF_INET: ::c_int = 2;
+        pub const PF_INET6: ::c_int = 23;
+    }
+}
 
 pub const AF_UNSPEC: ::c_int = 0;
-pub const AF_INET: ::c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const AF_INET: ::c_int = 1;
+    } else {
+        pub const AF_INET: ::c_int = 2;
+    }
+}
 
 pub const CLOCK_REALTIME: ::clockid_t = 1;
 pub const CLOCK_MONOTONIC: ::clockid_t = 4;
-pub const CLOCK_BOOTTIME: ::clockid_t = 4;
+pub const CLOCK_BOOTTIME: ::clockid_t = 4; // NOTE: Not in KOS
 
-pub const SOCK_STREAM: ::c_int = 1;
-pub const SOCK_DGRAM: ::c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SOCK_STREAM: ::c_int = 2;
+        pub const SOCK_DGRAM: ::c_int = 1;
+    } else {
+        pub const SOCK_STREAM: ::c_int = 1;
+        pub const SOCK_DGRAM: ::c_int = 2;
+    }
+}
 
-pub const SHUT_RD: ::c_int = 0;
-pub const SHUT_WR: ::c_int = 1;
-pub const SHUT_RDWR: ::c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SHUT_RD: ::c_int = 1;
+        pub const SHUT_WR: ::c_int = 2;
+        pub const SHUT_RDWR: ::c_int = 3;
+    } else {
+        pub const SHUT_RD: ::c_int = 0;
+        pub const SHUT_WR: ::c_int = 1;
+        pub const SHUT_RDWR: ::c_int = 2;
+    }
+}
 
-pub const SO_BINTIME: ::c_int = 0x2000;
-pub const SO_NO_OFFLOAD: ::c_int = 0x4000;
-pub const SO_NO_DDP: ::c_int = 0x8000;
-pub const SO_REUSEPORT_LB: ::c_int = 0x10000;
-pub const SO_LABEL: ::c_int = 0x1009;
-pub const SO_PEERLABEL: ::c_int = 0x1010;
-pub const SO_LISTENQLIMIT: ::c_int = 0x1011;
-pub const SO_LISTENQLEN: ::c_int = 0x1012;
-pub const SO_LISTENINCQLEN: ::c_int = 0x1013;
-pub const SO_SETFIB: ::c_int = 0x1014;
-pub const SO_USER_COOKIE: ::c_int = 0x1015;
-pub const SO_PROTOCOL: ::c_int = 0x1016;
-pub const SO_PROTOTYPE: ::c_int = SO_PROTOCOL;
-pub const SO_VENDOR: ::c_int = 0x80000000;
-pub const SO_DEBUG: ::c_int = 0x01;
-pub const SO_ACCEPTCONN: ::c_int = 0x0002;
-pub const SO_REUSEADDR: ::c_int = 0x0004;
-pub const SO_KEEPALIVE: ::c_int = 0x0008;
-pub const SO_DONTROUTE: ::c_int = 0x0010;
-pub const SO_BROADCAST: ::c_int = 0x0020;
-pub const SO_USELOOPBACK: ::c_int = 0x0040;
-pub const SO_LINGER: ::c_int = 0x0080;
-pub const SO_OOBINLINE: ::c_int = 0x0100;
-pub const SO_REUSEPORT: ::c_int = 0x0200;
-pub const SO_TIMESTAMP: ::c_int = 0x0400;
-pub const SO_NOSIGPIPE: ::c_int = 0x0800;
-pub const SO_ACCEPTFILTER: ::c_int = 0x1000;
-pub const SO_SNDBUF: ::c_int = 0x1001;
-pub const SO_RCVBUF: ::c_int = 0x1002;
-pub const SO_SNDLOWAT: ::c_int = 0x1003;
-pub const SO_RCVLOWAT: ::c_int = 0x1004;
-pub const SO_SNDTIMEO: ::c_int = 0x1005;
-pub const SO_RCVTIMEO: ::c_int = 0x1006;
+pub const SO_BINTIME: ::c_int = 0x2000; // NOTE: Not in KOS
+pub const SO_NO_OFFLOAD: ::c_int = 0x4000; // NOTE: Not in KOS
+pub const SO_NO_DDP: ::c_int = 0x8000; // NOTE: Not in KOS
+pub const SO_REUSEPORT_LB: ::c_int = 0x10000; // NOTE: Not in KOS
+pub const SO_LABEL: ::c_int = 0x1009; // NOTE: Not in KOS
+pub const SO_PEERLABEL: ::c_int = 0x1010; // NOTE: Not in KOS
+pub const SO_LISTENQLIMIT: ::c_int = 0x1011; // NOTE: Not in KOS
+pub const SO_LISTENQLEN: ::c_int = 0x1012; // NOTE: Not in KOS
+pub const SO_LISTENINCQLEN: ::c_int = 0x1013; // NOTE: Not in KOS
+pub const SO_SETFIB: ::c_int = 0x1014; // NOTE: Not in KOS
+pub const SO_USER_COOKIE: ::c_int = 0x1015; // NOTE: Not in KOS
+pub const SO_PROTOCOL: ::c_int = 0x1016; // NOTE: Not in KOS
+pub const SO_PROTOTYPE: ::c_int = SO_PROTOCOL; // NOTE: Not in KOS
+pub const SO_VENDOR: ::c_int = 0x80000000; // NOTE: Not in KOS
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SO_DEBUG: ::c_int = 3;
+        pub const SO_ACCEPTCONN: ::c_int = 1;
+        pub const SO_REUSEADDR: ::c_int = 12;
+        pub const SO_KEEPALIVE: ::c_int = 6;
+        pub const SO_DONTROUTE: ::c_int = 4;
+        pub const SO_BROADCAST: ::c_int = 2;
+        pub const SO_USELOOPBACK: ::c_int = 0x0040;     // NOTE: Not in KOS
+        pub const SO_LINGER: ::c_int = 7;
+        pub const SO_OOBINLINE: ::c_int = 8;
+        pub const SO_REUSEPORT: ::c_int = 0x0200;       // NOTE: Not in KOS
+        pub const SO_TIMESTAMP: ::c_int = 0x0400;       // NOTE: Not in KOS
+        pub const SO_NOSIGPIPE: ::c_int = 0x0800;       // NOTE: Not in KOS
+        pub const SO_ACCEPTFILTER: ::c_int = 0x1000;    // NOTE: Not in KOS
+        pub const SO_SNDBUF: ::c_int = 13;
+        pub const SO_RCVBUF: ::c_int = 9;
+        pub const SO_SNDLOWAT: ::c_int = 14;
+        pub const SO_RCVLOWAT: ::c_int = 10;
+        pub const SO_SNDTIMEO: ::c_int = 15;
+        pub const SO_RCVTIMEO: ::c_int = 11;
+    } else {
+        pub const SO_DEBUG: ::c_int = 0x01;
+        pub const SO_ACCEPTCONN: ::c_int = 0x0002;
+        pub const SO_REUSEADDR: ::c_int = 0x0004;
+        pub const SO_KEEPALIVE: ::c_int = 0x0008;
+        pub const SO_DONTROUTE: ::c_int = 0x0010;
+        pub const SO_BROADCAST: ::c_int = 0x0020;
+        pub const SO_USELOOPBACK: ::c_int = 0x0040;     // NOTE: Not in KOS
+        pub const SO_LINGER: ::c_int = 0x0080;
+        pub const SO_OOBINLINE: ::c_int = 0x0100;
+        pub const SO_REUSEPORT: ::c_int = 0x0200;       // NOTE: Not in KOS
+        pub const SO_TIMESTAMP: ::c_int = 0x0400;       // NOTE: Not in KOS
+        pub const SO_NOSIGPIPE: ::c_int = 0x0800;       // NOTE: Not in KOS
+        pub const SO_ACCEPTFILTER: ::c_int = 0x1000;    // NOTE: Not in KOS
+        pub const SO_SNDBUF: ::c_int = 0x1001;
+        pub const SO_RCVBUF: ::c_int = 0x1002;
+        pub const SO_SNDLOWAT: ::c_int = 0x1003;
+        pub const SO_RCVLOWAT: ::c_int = 0x1004;
+        pub const SO_SNDTIMEO: ::c_int = 0x1005;
+        pub const SO_RCVTIMEO: ::c_int = 0x1006;
+    }
+}
+
 cfg_if! {
     if #[cfg(target_os = "horizon")] {
         pub const SO_ERROR: ::c_int = 0x1009;
+    } else if #[cfg(target_os = "kallistios")] {
+        pub const SO_ERROR: ::c_int = 5;
     } else {
         pub const SO_ERROR: ::c_int = 0x1007;
     }
 }
-pub const SO_TYPE: ::c_int = 0x1008;
 
-pub const SOCK_CLOEXEC: ::c_int = O_CLOEXEC;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SO_TYPE: ::c_int = 16;
+    } else {
+        pub const SO_TYPE: ::c_int = 0x1008;
+    }
+}
+
+pub const SOCK_CLOEXEC: ::c_int = O_CLOEXEC; // NOTE: Not in KOS
 
 pub const INET_ADDRSTRLEN: ::c_int = 16;
 
+// NOTE: Not in KOS
 // https://github.com/bminor/newlib/blob/HEAD/newlib/libc/sys/linux/include/net/if.h#L121
 pub const IFF_UP: ::c_int = 0x1; // interface is up
 pub const IFF_BROADCAST: ::c_int = 0x2; // broadcast address valid
@@ -537,80 +660,119 @@ pub const IFF_ALTPHYS: ::c_int = IFF_LINK2; // use alternate physical connection
 pub const IFF_MULTICAST: ::c_int = 0x8000; // supports multicast
 
 cfg_if! {
-    if #[cfg(target_os = "vita")] {
+    if #[cfg(any(target_os = "vita", target_os = "kallistios"))] {
         pub const TCP_NODELAY: ::c_int = 1;
-        pub const TCP_MAXSEG: ::c_int = 2;
+        pub const TCP_MAXSEG: ::c_int = 2; // NOTE: Not in KOS
     } else {
         pub const TCP_NODELAY: ::c_int = 8193;
-        pub const TCP_MAXSEG: ::c_int = 8194;
+        pub const TCP_MAXSEG: ::c_int = 8194; // NOTE: Not in KOS
     }
 }
 
-pub const TCP_NOPUSH: ::c_int = 4;
-pub const TCP_NOOPT: ::c_int = 8;
-pub const TCP_KEEPIDLE: ::c_int = 256;
-pub const TCP_KEEPINTVL: ::c_int = 512;
-pub const TCP_KEEPCNT: ::c_int = 1024;
+pub const TCP_NOPUSH: ::c_int = 4; // NOTE: Not in KOS
+pub const TCP_NOOPT: ::c_int = 8; // NOTE: Not in KOS
+pub const TCP_KEEPIDLE: ::c_int = 256; // NOTE: Not in KOS
+pub const TCP_KEEPINTVL: ::c_int = 512; // NOTE: Not in KOS
+pub const TCP_KEEPCNT: ::c_int = 1024; // NOTE: Not in KOS
 
 cfg_if! {
     if #[cfg(target_os = "horizon")] {
-        pub const IP_TOS: ::c_int = 7;
+        pub const IP_TOS: ::c_int = 7; // NOTE: Not in KOS
     } else {
-        pub const IP_TOS: ::c_int = 3;
+        pub const IP_TOS: ::c_int = 3; // NOTE: Not in KOS
     }
 }
 cfg_if! {
-    if #[cfg(target_os = "vita")] {
+    if #[cfg(target_os = "kallistios")] {
+        pub const IP_TTL: ::c_int = 24;
+    } else if #[cfg(target_os = "vita")] {
         pub const IP_TTL: ::c_int = 4;
     } else {
         pub const IP_TTL: ::c_int = 8;
     }
 }
-pub const IP_MULTICAST_IF: ::c_int = 9;
-pub const IP_MULTICAST_TTL: ::c_int = 10;
-pub const IP_MULTICAST_LOOP: ::c_int = 11;
+pub const IP_MULTICAST_IF: ::c_int = 9; // NOTE: Not in KOS
+pub const IP_MULTICAST_TTL: ::c_int = 10; // NOTE: Not in KOS
+pub const IP_MULTICAST_LOOP: ::c_int = 11; // NOTE: Not in KOS
 cfg_if! {
     if #[cfg(target_os = "vita")] {
-        pub const IP_ADD_MEMBERSHIP: ::c_int = 12;
-        pub const IP_DROP_MEMBERSHIP: ::c_int = 13;
+        pub const IP_ADD_MEMBERSHIP: ::c_int = 12; // NOTE: Not in KOS
+        pub const IP_DROP_MEMBERSHIP: ::c_int = 13; // NOTE: Not in KOS
     } else {
-        pub const IP_ADD_MEMBERSHIP: ::c_int = 11;
-        pub const IP_DROP_MEMBERSHIP: ::c_int = 12;
+        pub const IP_ADD_MEMBERSHIP: ::c_int = 11; // NOTE: Not in KOS
+        pub const IP_DROP_MEMBERSHIP: ::c_int = 12; // NOTE: Not in KOS
     }
 }
-pub const IPV6_UNICAST_HOPS: ::c_int = 4;
-pub const IPV6_MULTICAST_IF: ::c_int = 9;
-pub const IPV6_MULTICAST_HOPS: ::c_int = 10;
-pub const IPV6_MULTICAST_LOOP: ::c_int = 11;
-pub const IPV6_V6ONLY: ::c_int = 27;
-pub const IPV6_JOIN_GROUP: ::c_int = 12;
-pub const IPV6_LEAVE_GROUP: ::c_int = 13;
-pub const IPV6_ADD_MEMBERSHIP: ::c_int = 12;
-pub const IPV6_DROP_MEMBERSHIP: ::c_int = 13;
 
-pub const HOST_NOT_FOUND: ::c_int = 1;
-pub const NO_DATA: ::c_int = 2;
-pub const NO_ADDRESS: ::c_int = 2;
-pub const NO_RECOVERY: ::c_int = 3;
-pub const TRY_AGAIN: ::c_int = 4;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const IPV6_UNICAST_HOPS: ::c_int = 22;
+        pub const IPV6_MULTICAST_IF: ::c_int = 20;
+        pub const IPV6_MULTICAST_HOPS: ::c_int = 19;
+        pub const IPV6_MULTICAST_LOOP: ::c_int = 21;
+        pub const IPV6_V6ONLY: ::c_int = 23;
+        pub const IPV6_JOIN_GROUP: ::c_int = 17;
+        pub const IPV6_LEAVE_GROUP: ::c_int = 18;
+        pub const IPV6_ADD_MEMBERSHIP: ::c_int = 12;  // NOTE: Not in KOS
+        pub const IPV6_DROP_MEMBERSHIP: ::c_int = 13; // NOTE: Not in KOS
+    } else {
+        pub const IPV6_UNICAST_HOPS: ::c_int = 4;
+        pub const IPV6_MULTICAST_IF: ::c_int = 9;
+        pub const IPV6_MULTICAST_HOPS: ::c_int = 10;
+        pub const IPV6_MULTICAST_LOOP: ::c_int = 11;
+        pub const IPV6_V6ONLY: ::c_int = 27;
+        pub const IPV6_JOIN_GROUP: ::c_int = 12;
+        pub const IPV6_LEAVE_GROUP: ::c_int = 13;
+        pub const IPV6_ADD_MEMBERSHIP: ::c_int = 12;  // NOTE: Not in KOS
+        pub const IPV6_DROP_MEMBERSHIP: ::c_int = 13; // NOTE: Not in KOS
+    }
+}
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const HOST_NOT_FOUND: ::c_int = 1;
+        pub const NO_DATA: ::c_int = 4;
+        pub const NO_ADDRESS: ::c_int = 4;      // NOTE: Not in KOS
+        pub const NO_RECOVERY: ::c_int = 3;
+        pub const TRY_AGAIN: ::c_int = 2;
+    } else {
+        pub const HOST_NOT_FOUND: ::c_int = 1;
+        pub const NO_DATA: ::c_int = 2;
+        pub const NO_ADDRESS: ::c_int = 2;      // NOTE: Not in KOS
+        pub const NO_RECOVERY: ::c_int = 3;
+        pub const TRY_AGAIN: ::c_int = 4;
+    }
+}
 
 pub const AI_PASSIVE: ::c_int = 1;
 pub const AI_CANONNAME: ::c_int = 2;
 pub const AI_NUMERICHOST: ::c_int = 4;
-pub const AI_NUMERICSERV: ::c_int = 0;
-pub const AI_ADDRCONFIG: ::c_int = 0;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const AI_NUMERICSERV: ::c_int = 8;
+        pub const AI_ADDRCONFIG: ::c_int = 64;
+    } else {
+        pub const AI_NUMERICSERV: ::c_int = 0;
+        pub const AI_ADDRCONFIG: ::c_int = 0;
+    }
+}
 
-pub const NI_MAXHOST: ::c_int = 1025;
-pub const NI_MAXSERV: ::c_int = 32;
-pub const NI_NOFQDN: ::c_int = 1;
-pub const NI_NUMERICHOST: ::c_int = 2;
-pub const NI_NAMEREQD: ::c_int = 4;
-pub const NI_NUMERICSERV: ::c_int = 0;
-pub const NI_DGRAM: ::c_int = 0;
+pub const NI_MAXHOST: ::c_int = 1025; // NOTE: Not in KOS
+pub const NI_MAXSERV: ::c_int = 32; // NOTE: Not in KOS
+pub const NI_NOFQDN: ::c_int = 1; // NOTE: Not in KOS
+pub const NI_NUMERICHOST: ::c_int = 2; // NOTE: Not in KOS
+pub const NI_NAMEREQD: ::c_int = 4; // NOTE: Not in KOS
+pub const NI_NUMERICSERV: ::c_int = 0; // NOTE: Not in KOS
+pub const NI_DGRAM: ::c_int = 0; // NOTE: Not in KOS
 
 cfg_if! {
-    // Defined in vita/mod.rs for "vita"
-    if #[cfg(not(target_os = "vita"))] {
+    if #[cfg(target_os = "kallistios")] {
+        pub const EAI_FAMILY: ::c_int = 4;
+        pub const EAI_MEMORY: ::c_int = 5;
+        pub const EAI_NONAME: ::c_int = 6;
+        pub const EAI_SOCKTYPE: ::c_int = 8;
+        // Defined in vita/mod.rs for "vita"
+    } else if #[cfg(not(target_os = "vita"))] {
         pub const EAI_FAMILY: ::c_int = -303;
         pub const EAI_MEMORY: ::c_int = -304;
         pub const EAI_NONAME: ::c_int = -305;
@@ -621,9 +783,11 @@ cfg_if! {
 pub const EXIT_SUCCESS: ::c_int = 0;
 pub const EXIT_FAILURE: ::c_int = 1;
 
-pub const PRIO_PROCESS: ::c_int = 0;
-pub const PRIO_PGRP: ::c_int = 1;
-pub const PRIO_USER: ::c_int = 2;
+pub const PRIO_PROCESS: ::c_int = 0; // NOTE: Not in KOS
+pub const PRIO_PGRP: ::c_int = 1; // NOTE: Not in KOS
+pub const PRIO_USER: ::c_int = 2; // NOTE: Not in KOS
+
+//// Below this line, macros and functions not confirmed for KOS ////
 
 f! {
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
@@ -773,6 +937,9 @@ cfg_if! {
     } else if #[cfg(target_os = "horizon")] {
         mod horizon;
         pub use self::horizon::*;
+    } else if #[cfg(target_os = "kallistios")] {
+        mod kallistios;
+        pub use self::kallistios::*;
     } else if #[cfg(target_os = "vita")] {
         mod vita;
         pub use self::vita::*;
