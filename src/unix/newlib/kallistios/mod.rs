@@ -215,6 +215,7 @@ pub const SCHED_RR: ::c_int = 2;
 pub const RTLD_DEFAULT: *mut ::c_void = 0 as *mut ::c_void;
 
 extern "C" {
+    pub fn arc4random_buf(buf: *mut ::c_void, nbytes: ::size_t);
     pub fn dirfd(dirp: *mut ::DIR) -> ::c_int;
     pub fn futimens(fd: ::c_int, times: *const ::timespec) -> ::c_int;
     pub fn getentropy(ptr: *mut ::c_void, len: ::size_t) -> ::c_int;
