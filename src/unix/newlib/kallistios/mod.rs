@@ -193,6 +193,8 @@ pub const _SC_GETPW_R_SIZE_MAX: ::c_int = 51;
 
 pub const PTHREAD_STACK_MIN: ::size_t = 256;
 
+pub const IOV_MAX: ::size_t = 1024;
+
 pub const AF_INET6: ::c_int = 2;
 
 // Not in KOS, but defined to allow compilation
