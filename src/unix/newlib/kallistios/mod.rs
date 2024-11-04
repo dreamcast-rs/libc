@@ -4,6 +4,9 @@ pub type c_char = i8;
 pub type c_long = i32;
 pub type c_ulong = u32;
 
+pub type c_size_t = usize;
+pub type c_ssize_t = isize;
+
 pub type wchar_t = ::c_long;
 
 pub type u_register_t = ::uintptr_t;
