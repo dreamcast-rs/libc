@@ -6,6 +6,7 @@ pub type c_ulong = u32;
 
 pub type c_size_t = usize;
 pub type c_ssize_t = isize;
+pub type c_uintptr_t = ::uintptr_t;
 
 pub type wchar_t = ::c_long;
 
