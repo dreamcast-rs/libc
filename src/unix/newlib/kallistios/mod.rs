@@ -23,6 +23,7 @@ pub type daddr_t = c_long;
 pub type caddr_t = *mut c_char;
 pub type sbintime_t = ::c_longlong;
 pub type sigset_t = ::c_ulong;
+pub type off64_t = ::c_longlong;
 
 s! {
     // d_name is a flexible array member so this definition is
