@@ -16,7 +16,8 @@
     missing_unsafe_on_extern,
     edition_2024_expr_fragment_specifier,
     // Allowed globally, the warning is enabled in individual modules as we work through them
-    unsafe_op_in_unsafe_fn
+    unsafe_op_in_unsafe_fn,
+    dead_code
 )]
 #![cfg_attr(libc_deny_warnings, deny(warnings))]
 // Attributes needed when building as part of the standard library

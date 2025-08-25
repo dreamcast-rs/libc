@@ -24,6 +24,7 @@ cfg_if! {
     if #[cfg(any(
         target_os = "espidf",
         target_os = "horizon",
+        target_os = "kallistios",
         target_os = "vita"
     ))] {
         pub type uid_t = c_ushort;

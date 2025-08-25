@@ -10,6 +10,10 @@ cfg_if! {
         pub type dev_t = c_short;
         pub type ino_t = c_ushort;
         pub type off_t = c_long;
+    } else if #[cfg(any(target_os = "kallistios"))] {
+        pub type dev_t = c_short;
+        pub type ino_t = c_ulong;
+        pub type off_t = c_long;
     } else if #[cfg(any(target_os = "vita"))] {
         pub type dev_t = c_short;
         pub type ino_t = c_ushort;
@@ -56,6 +60,7 @@ pub type useconds_t = u32;
 cfg_if! {
     if #[cfg(any(
         target_os = "horizon",
+        target_os = "kallistios",
         all(target_os = "espidf", not(espidf_time32))
     ))] {
         pub type time_t = c_longlong;
@@ -65,7 +70,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(not(target_os = "horizon"))] {
+    if #[cfg(not(any(target_os = "horizon", target_os = "kallistios")))] {
         s! {
             pub struct hostent {
                 pub h_name: *mut c_char,
@@ -89,13 +94,13 @@ s! {
         pub ai_protocol: c_int,
         pub ai_addrlen: socklen_t,
 
-        #[cfg(target_os = "espidf")]
+        #[cfg(any(target_os = "espidf", target_os = "kallistios"))]
         pub ai_addr: *mut sockaddr,
 
         pub ai_canonname: *mut c_char,
 
         #[cfg(not(any(
-            target_os = "espidf",
+            target_os = "espidf", target_os = "kallistios",
             all(target_arch = "powerpc", target_vendor = "nintendo")
         )))]
         pub ai_addr: *mut sockaddr,
@@ -119,7 +124,15 @@ s! {
 
     pub struct pollfd {
         pub fd: c_int,
+
+        #[cfg(target_os = "kallistios")]
+        pub events: c_short,
+        #[cfg(target_os = "kallistios")]
+        pub revents: c_short,
+
+        #[cfg(not(target_os = "kallistios"))]
         pub events: c_int,
+        #[cfg(not(target_os = "kallistios"))]
         pub revents: c_int,
     }
 
@@ -233,11 +246,30 @@ s! {
 
     pub struct utsname {
         // Unverified
+        #[cfg(target_os = "kallistios")]
+        pub sysname: [c_char; 64],
+        #[cfg(target_os = "kallistios")]
+        pub nodename: [c_char; 64],
+        #[cfg(target_os = "kallistios")]
+        pub release: [c_char; 64],
+        #[cfg(target_os = "kallistios")]
+        pub version: [c_char; 64],
+        #[cfg(target_os = "kallistios")]
+        pub machine: [c_char; 64],
+        #[cfg(target_os = "kallistios")]
+        pub domainname: [c_char; 64],
+
+        #[cfg(not(target_os = "kallistios"))]
         pub sysname: [c_char; 65],
+        #[cfg(not(target_os = "kallistios"))]
         pub nodename: [c_char; 65],
+        #[cfg(not(target_os = "kallistios"))]
         pub release: [c_char; 65],
+        #[cfg(not(target_os = "kallistios"))]
         pub version: [c_char; 65],
+        #[cfg(not(target_os = "kallistios"))]
         pub machine: [c_char; 65],
+        #[cfg(not(target_os = "kallistios"))]
         pub domainname: [c_char; 65],
     }
 
@@ -381,6 +413,16 @@ cfg_if! {
         pub const __SIZEOF_PTHREAD_RWLOCK_T: usize = 4;
         pub const __SIZEOF_PTHREAD_RWLOCKATTR_T: usize = 12;
         pub const __SIZEOF_PTHREAD_BARRIER_T: usize = 32;
+    } else if #[cfg(target_os = "kallistios")] {
+        const __PTHREAD_INITIALIZER_BYTE: u8 = 0;
+        pub const __SIZEOF_PTHREAD_ATTR_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_MUTEX_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_MUTEXATTR_T: usize = 8;
+        pub const __SIZEOF_PTHREAD_COND_T: usize = 16;
+        pub const __SIZEOF_PTHREAD_CONDATTR_T: usize = 16;
+        pub const __SIZEOF_PTHREAD_RWLOCK_T: usize = 32;
+        pub const __SIZEOF_PTHREAD_RWLOCKATTR_T: usize = 0;
+        pub const __SIZEOF_PTHREAD_BARRIER_T: usize = 64;
     } else if #[cfg(target_os = "vita")] {
         const __PTHREAD_INITIALIZER_BYTE: u8 = 0xff;
         pub const __SIZEOF_PTHREAD_ATTR_T: usize = 4;
@@ -414,12 +456,23 @@ cfg_if! {
     }
 }
 
-pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 4;
-pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 1;
-pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 1;
-pub const PTHREAD_MUTEX_NORMAL: c_int = 0;
-pub const PTHREAD_MUTEX_RECURSIVE: c_int = 1;
-pub const PTHREAD_MUTEX_ERRORCHECK: c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 0;
+        pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 0;
+        pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 0;
+        pub const PTHREAD_MUTEX_NORMAL: c_int = 0;
+        pub const PTHREAD_MUTEX_RECURSIVE: c_int = 3;
+        pub const PTHREAD_MUTEX_ERRORCHECK: c_int = 2;
+    } else {
+        pub const __SIZEOF_PTHREAD_BARRIERATTR_T: usize = 4;
+        pub const __PTHREAD_MUTEX_HAVE_PREV: usize = 1;
+        pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: usize = 1;
+        pub const PTHREAD_MUTEX_NORMAL: c_int = 0;
+        pub const PTHREAD_MUTEX_RECURSIVE: c_int = 1;
+        pub const PTHREAD_MUTEX_ERRORCHECK: c_int = 2;
+    }
+}
 
 cfg_if! {
     if #[cfg(any(target_os = "horizon", target_os = "espidf"))] {
@@ -548,7 +601,7 @@ pub const O_NONBLOCK: c_int = 16384;
 
 pub const O_ACCMODE: c_int = 3;
 cfg_if! {
-    if #[cfg(target_os = "espidf")] {
+    if #[cfg(any(target_os = "espidf", target_os = "kallistios"))] {
         pub const O_CLOEXEC: c_int = 0x40000;
     } else {
         pub const O_CLOEXEC: c_int = 0x80000;
@@ -594,28 +647,53 @@ pub const S_IXOTH: mode_t = 0o0001;
 pub const SOL_TCP: c_int = 6;
 
 pub const PF_UNSPEC: c_int = 0;
-pub const PF_INET: c_int = 2;
 cfg_if! {
     if #[cfg(target_os = "espidf")] {
+        pub const PF_INET: c_int = 2;
         pub const PF_INET6: c_int = 10;
+    } else if #[cfg(target_os = "kallistios")] {
+        pub const PF_INET: c_int = 1;
+        pub const PF_INET6: c_int = 2;
     } else {
+        pub const PF_INET: c_int = 2;
         pub const PF_INET6: c_int = 23;
     }
 }
 
 pub const AF_UNSPEC: c_int = 0;
-pub const AF_INET: c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const AF_INET: c_int = 1;
+    } else {
+        pub const AF_INET: c_int = 2;
+    }
+}
 
 pub const CLOCK_REALTIME: crate::clockid_t = 1;
 pub const CLOCK_MONOTONIC: crate::clockid_t = 4;
 pub const CLOCK_BOOTTIME: crate::clockid_t = 4;
 
-pub const SOCK_STREAM: c_int = 1;
-pub const SOCK_DGRAM: c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SOCK_STREAM: c_int = 2;
+        pub const SOCK_DGRAM: c_int = 1;
+    } else {
+        pub const SOCK_STREAM: c_int = 1;
+        pub const SOCK_DGRAM: c_int = 2;
+    }
+}
 
-pub const SHUT_RD: c_int = 0;
-pub const SHUT_WR: c_int = 1;
-pub const SHUT_RDWR: c_int = 2;
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SHUT_RD: c_int = 1;
+        pub const SHUT_WR: c_int = 2;
+        pub const SHUT_RDWR: c_int = 3;
+    } else {
+        pub const SHUT_RD: c_int = 0;
+        pub const SHUT_WR: c_int = 1;
+        pub const SHUT_RDWR: c_int = 2;
+    }
+}
 
 pub const SO_BINTIME: c_int = 0x2000;
 pub const SO_NO_OFFLOAD: c_int = 0x4000;
@@ -631,33 +709,64 @@ pub const SO_USER_COOKIE: c_int = 0x1015;
 pub const SO_PROTOCOL: c_int = 0x1016;
 pub const SO_PROTOTYPE: c_int = SO_PROTOCOL;
 pub const SO_VENDOR: c_int = 0x80000000;
-pub const SO_DEBUG: c_int = 0x01;
-pub const SO_ACCEPTCONN: c_int = 0x0002;
-pub const SO_REUSEADDR: c_int = 0x0004;
-pub const SO_KEEPALIVE: c_int = 0x0008;
-pub const SO_DONTROUTE: c_int = 0x0010;
-pub const SO_BROADCAST: c_int = 0x0020;
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SO_DEBUG: c_int = 3;
+        pub const SO_ACCEPTCONN: c_int = 1;
+        pub const SO_REUSEADDR: c_int = 12;
+        pub const SO_KEEPALIVE: c_int = 6;
+        pub const SO_DONTROUTE: c_int = 4;
+        pub const SO_BROADCAST: c_int = 2;
+        pub const SO_LINGER: c_int = 7;
+        pub const SO_OOBINLINE: c_int = 8;
+        pub const SO_SNDBUF: c_int = 13;
+        pub const SO_RCVBUF: c_int = 9;
+        pub const SO_SNDLOWAT: c_int = 14;
+        pub const SO_RCVLOWAT: c_int = 10;
+        pub const SO_SNDTIMEO: c_int = 15;
+        pub const SO_RCVTIMEO: c_int = 11;
+    } else {
+        pub const SO_DEBUG: c_int = 0x01;
+        pub const SO_ACCEPTCONN: c_int = 0x0002;
+        pub const SO_REUSEADDR: c_int = 0x0004;
+        pub const SO_KEEPALIVE: c_int = 0x0008;
+        pub const SO_DONTROUTE: c_int = 0x0010;
+        pub const SO_BROADCAST: c_int = 0x0020;
+        pub const SO_LINGER: c_int = 0x0080;
+        pub const SO_OOBINLINE: c_int = 0x0100;
+        pub const SO_SNDBUF: c_int = 0x1001;
+        pub const SO_RCVBUF: c_int = 0x1002;
+        pub const SO_SNDLOWAT: c_int = 0x1003;
+        pub const SO_RCVLOWAT: c_int = 0x1004;
+        pub const SO_SNDTIMEO: c_int = 0x1005;
+        pub const SO_RCVTIMEO: c_int = 0x1006;
+    }
+}
+
 pub const SO_USELOOPBACK: c_int = 0x0040;
-pub const SO_LINGER: c_int = 0x0080;
-pub const SO_OOBINLINE: c_int = 0x0100;
 pub const SO_REUSEPORT: c_int = 0x0200;
 pub const SO_TIMESTAMP: c_int = 0x0400;
 pub const SO_NOSIGPIPE: c_int = 0x0800;
 pub const SO_ACCEPTFILTER: c_int = 0x1000;
-pub const SO_SNDBUF: c_int = 0x1001;
-pub const SO_RCVBUF: c_int = 0x1002;
-pub const SO_SNDLOWAT: c_int = 0x1003;
-pub const SO_RCVLOWAT: c_int = 0x1004;
-pub const SO_SNDTIMEO: c_int = 0x1005;
-pub const SO_RCVTIMEO: c_int = 0x1006;
+
 cfg_if! {
     if #[cfg(target_os = "horizon")] {
         pub const SO_ERROR: c_int = 0x1009;
+    } else if #[cfg(target_os = "kallistios")] {
+        pub const SO_ERROR: c_int = 5;
     } else {
         pub const SO_ERROR: c_int = 0x1007;
     }
 }
-pub const SO_TYPE: c_int = 0x1008;
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const SO_TYPE: c_int = 16;
+    } else {
+        pub const SO_TYPE: c_int = 0x1008;
+    }
+}
 
 pub const SOCK_CLOEXEC: c_int = O_CLOEXEC;
 
@@ -683,7 +792,7 @@ pub const IFF_ALTPHYS: c_int = IFF_LINK2; // use alternate physical connection
 pub const IFF_MULTICAST: c_int = 0x8000; // supports multicast
 
 cfg_if! {
-    if #[cfg(target_os = "vita")] {
+    if #[cfg(any(target_os = "vita", target_os = "kallistios"))] {
         pub const TCP_NODELAY: c_int = 1;
         pub const TCP_MAXSEG: c_int = 2;
     } else if #[cfg(target_os = "espidf")] {
@@ -719,7 +828,9 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(target_os = "vita")] {
+    if #[cfg(target_os = "kallistios")] {
+        pub const IP_TTL: c_int = 24;
+    } else if #[cfg(target_os = "vita")] {
         pub const IP_TTL: c_int = 4;
     } else if #[cfg(target_os = "espidf")] {
         pub const IP_TTL: c_int = 2;
@@ -752,44 +863,73 @@ cfg_if! {
         pub const IP_DROP_MEMBERSHIP: c_int = 12;
     }
 }
-pub const IPV6_UNICAST_HOPS: c_int = 4;
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const IPV6_UNICAST_HOPS: c_int = 22;
+    } else {
+        pub const IPV6_UNICAST_HOPS: c_int = 4;
+    }
+}
+
 cfg_if! {
     if #[cfg(target_os = "espidf")] {
         pub const IPV6_MULTICAST_IF: c_int = 768;
         pub const IPV6_MULTICAST_HOPS: c_int = 769;
         pub const IPV6_MULTICAST_LOOP: c_int = 770;
-    } else {
+    } else if #[cfg(target_os = "kallistios")] {
+        pub const IPV6_MULTICAST_IF: c_int = 20;
+        pub const IPV6_MULTICAST_HOPS: c_int = 19;
+        pub const IPV6_MULTICAST_LOOP: c_int = 21;
+    } else{
         pub const IPV6_MULTICAST_IF: c_int = 9;
         pub const IPV6_MULTICAST_HOPS: c_int = 10;
         pub const IPV6_MULTICAST_LOOP: c_int = 11;
     }
 }
-pub const IPV6_V6ONLY: c_int = 27;
-pub const IPV6_JOIN_GROUP: c_int = 12;
-pub const IPV6_LEAVE_GROUP: c_int = 13;
+
+cfg_if! {
+    if #[cfg(target_os = "kallistios")] {
+        pub const IPV6_V6ONLY: c_int = 23;
+        pub const IPV6_JOIN_GROUP: c_int = 17;
+        pub const IPV6_LEAVE_GROUP: c_int = 18;
+    } else {
+        pub const IPV6_V6ONLY: c_int = 27;
+        pub const IPV6_JOIN_GROUP: c_int = 12;
+        pub const IPV6_LEAVE_GROUP: c_int = 13;
+    }
+}
+
 pub const IPV6_ADD_MEMBERSHIP: c_int = 12;
 pub const IPV6_DROP_MEMBERSHIP: c_int = 13;
 
 cfg_if! {
-    if #[cfg(target_os = "espidf")] {
+    if #[cfg(target_os = "kallistios")] {
+        pub const HOST_NOT_FOUND: c_int = 1;
+        pub const NO_DATA: c_int = 4;
+        pub const NO_ADDRESS: c_int = 4;
+        pub const NO_RECOVERY: c_int = 3;
+        pub const TRY_AGAIN: c_int = 2;
+    } else if #[cfg(target_os = "espidf")] {
         pub const HOST_NOT_FOUND: c_int = 210;
         pub const NO_DATA: c_int = 211;
+        pub const NO_ADDRESS: c_int = 2;
         pub const NO_RECOVERY: c_int = 212;
         pub const TRY_AGAIN: c_int = 213;
     } else {
         pub const HOST_NOT_FOUND: c_int = 1;
         pub const NO_DATA: c_int = 2;
+        pub const NO_ADDRESS: c_int = 2;
         pub const NO_RECOVERY: c_int = 3;
         pub const TRY_AGAIN: c_int = 4;
     }
 }
-pub const NO_ADDRESS: c_int = 2;
 
 pub const AI_PASSIVE: c_int = 1;
 pub const AI_CANONNAME: c_int = 2;
 pub const AI_NUMERICHOST: c_int = 4;
 cfg_if! {
-    if #[cfg(target_os = "espidf")] {
+    if #[cfg(any(target_os = "espidf", target_os = "kallistios"))] {
         pub const AI_NUMERICSERV: c_int = 8;
         pub const AI_ADDRCONFIG: c_int = 64;
     } else {
@@ -820,6 +960,11 @@ cfg_if! {
         pub const EAI_MEMORY: c_int = 203;
         pub const EAI_NONAME: c_int = 200;
         pub const EAI_SOCKTYPE: c_int = 10;
+    } else if #[cfg(target_os = "kallistios")] {
+        pub const EAI_FAMILY: c_int = 4;
+        pub const EAI_MEMORY: c_int = 5;
+        pub const EAI_NONAME: c_int = 6;
+        pub const EAI_SOCKTYPE: c_int = 8;
     } else if #[cfg(not(target_os = "vita"))] {
         pub const EAI_FAMILY: c_int = -303;
         pub const EAI_MEMORY: c_int = -304;
@@ -970,6 +1115,9 @@ cfg_if! {
     } else if #[cfg(target_os = "horizon")] {
         mod horizon;
         pub use self::horizon::*;
+    } else if #[cfg(target_os = "kallistios")] {
+        mod kallistios;
+        pub use self::kallistios::*;
     } else if #[cfg(target_os = "vita")] {
         mod vita;
         pub use self::vita::*;
